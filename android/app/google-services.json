@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "170815845359",
+    "firebase_url": "https://dx-lifestation-default-rtdb.firebaseio.com",
+    "project_id": "dx-lifestation",
+    "storage_bucket": "dx-lifestation.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:170815845359:android:ad46a94efb65965feffc1a",
+        "android_client_info": {
+          "package_name": "com.example.dx_customer_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCf7sp2VT6fhQiRdUsj_RwdJ5lh38IFcxI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

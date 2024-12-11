@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Kakao Map</title>
+    <script
+      type="text/javascript"
+      src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=0cdda477d050b10c41c205697d3fdf03">
+    </script>
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+      #map {
+        width: 100%;
+        height: 100%;
+      }
+      /* Custom Overlay Style */
+      .custom-overlay {
+        position: relative;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.15);
+        width: 600px;
+        height: 400px;
+        padding: 16px;
+        font-family: Arial, sans-serif;
+      }
+      .custom-overlay img {
+        width: 100%;
+        height: 200px;
+        border-radius: 8px;
+        object-fit: cover;
+      }
+      .custom-overlay .title {
+        font-size: 40px;
+        font-weight: bold;
+        margin-top: 16px;
+      }
+      .custom-overlay .address {
+        font-size: 24px;
+        color: #666;
+        margin-top: 8px;
+      }
+      .custom-overlay .button {
+        display: inline-block;
+        margin-top: 32px;
+        color: #ff6600;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 36px;
+      }
+      .custom-overlay .close-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: none;
+        border: none;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+        color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      let map;
+      let markers = [];
+      let activeOverlays = {};
+      let isMapReady = false; // 지도 초기화 상태 확인
+
+      // 지도 초기화 함수
+      function initializeMap() {
+        const container = document.getElementById("map");
+        const options = {
+          center: new kakao.maps.LatLng(CURRENT_LATITUDE, CURRENT_LONGITUDE),
+          level: 4,
+        };
+        map = new kakao.maps.Map(container, options);
+
+        // 타일 로딩 완료 이벤트로 지도 초기화 상태 업데이트
+        kakao.maps.event.addListener(map, "tilesloaded", function () {
+          isMapReady = true;
+          console.log("지도 초기화 완료");
+        });
+      }
+
+      // 마커 이미지 생성 함수
+      function createMarkerImage() {
+        const imageSrc = "https://cdn1.iconfinder.com/data/icons/color-bold-style/21/14_2-512.png";
+        const imageSize = new kakao.maps.Size(100, 100);
+        return new kakao.maps.MarkerImage(imageSrc, imageSize);
+      }
+
+      // 마커 추가 함수
+      function addMarkers(stores) {
+        if (!isMapReady) {
+          console.error("지도 초기화가 완료되지 않았습니다.");
+          return;
+        }
+
+        try {
+          const storeList = JSON.parse(stores);
+          markers.forEach((marker) => marker.setMap(null));
+          markers = [];
+
+          storeList.forEach((store) => {
+            const markerPosition = new kakao.maps.LatLng(store.latitude, store.longitude);
+            const marker = new kakao.maps.Marker({
+              position: markerPosition,
+              image: createMarkerImage(),
+              map: map,
+            });
+            markers.push(marker);
+
+            // 오버레이 생성
+            const overlayContent = createCustomOverlay(store, markerPosition);
+            kakao.maps.event.addListener(marker, "click", function () {
+              closeAllOverlays();
+              overlayContent.setMap(map);
+              activeOverlays[store.store_id] = overlayContent;
+            });
+          });
+        } catch (error) {
+          console.error("addMarkers 오류:", error);
+        }
+      }
+
+      // 커스텀 오버레이 생성 함수
+      function createCustomOverlay(store, position) {
+        const overlayContent = document.createElement("div");
+        overlayContent.className = "custom-overlay";
+        overlayContent.innerHTML = `
+          <button class="close-btn">X</button>
+          <img src=${store.url} />
+          <div class="title">${store.store_name}</div>
+          <div class="address">${store.store_address}</div>
+          <a href="javascript:sendToFlutter('${encodeURIComponent(JSON.stringify(store))}');" class="button">방문하기</a>
+        `;
+        const customOverlay = new kakao.maps.CustomOverlay({
+          content: overlayContent,
+          position: position,
+          xAnchor: 0.5,
+          yAnchor: 1.6,
+        });
+        overlayContent.querySelector(".close-btn").addEventListener("click", function () {
+          customOverlay.setMap(null);
+          delete activeOverlays[store.store_id];
+        });
+        return customOverlay;
+      }
+
+      // 활성 오버레이 닫기 함수
+      function closeAllOverlays() {
+        Object.values(activeOverlays).forEach((overlay) => {
+          overlay.setMap(null);
+        });
+        activeOverlays = {};
+      }
+
+      // Flutter로 데이터 전송
+      function sendToFlutter(store) {
+        try {
+          const decodedStore = JSON.parse(decodeURIComponent(store));
+          if (window.Flutter?.postMessage) {
+            window.Flutter.postMessage(JSON.stringify(decodedStore));
+          } else {
+            console.error("Flutter bridge is not available.");
+          }
+        } catch (error) {
+          console.error("Error in sendToFlutter:", error);
+        }
+      }
+
+      // HTML이 로드된 후 초기화
+      window.onload = function () {
+        if (typeof kakao === "undefined") {
+          console.error("Kakao Maps SDK is not loaded properly.");
+          return;
+        }
+        initializeMap();
+      };
+
+      // addMarkers가 정의되지 않은 경우 기본 구현 제공
+      if (typeof window.addMarkers === "undefined") {
+        window.addMarkers = addMarkers;
+      }
+    </script>
+  </body>
+</html>
